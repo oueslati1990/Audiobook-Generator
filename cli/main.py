@@ -5,6 +5,7 @@ from typing import Optional
 from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
+from ..models.config import AudiobookConfig, TTSConfig, OutputConfig, ChapterDetectionConfig
 
 app = typer.Typer(help="Convert PDF books to audiobooks using AI", invoke_without_command=True)
 console = Console()
@@ -72,6 +73,29 @@ def generate(
         f"⚡ Speed: [yellow]{speed}x[/yellow]",
         title="Configuration"
     ))
+
+    # Build configuration
+    config = AudiobookConfig(
+        TTSConfig(
+            provider="coqui",
+            voice=voice,
+            speed=speed,
+            language="en"
+        ),
+        OutputConfig(
+            format=format,
+            bitrate="128k",
+            directory=output_dir
+        ),
+        ChapterDetectionConfig(
+            method="regex",
+            pattern=chapter_pattern
+        )
+    )
+
+    # Create agent
+    agent = AudiobookAgent()
+
 
 
 
