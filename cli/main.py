@@ -1,4 +1,12 @@
-pp = typer.Typer(help="Convert PDF books to audiobooks using AI", invoke_without_command=True)
+"""CLI interface for audiobook generator"""
+
+import typer
+from typing import Optional
+from pathlib import Path
+from rich.console import Console
+from rich.panel import Panel
+
+app = typer.Typer(help="Convert PDF books to audiobooks using AI", invoke_without_command=True)
 console = Console()
 
 
