@@ -1,0 +1,58 @@
+import logging
+from models.config import AudiobookConfig
+from agents.audiobook_state import AudiobookState
+from modules.parser.pdf_parser import PDFParser
+from langgraph.graph import StateGraph, END
+from pathlib import Path
+
+
+logger = logging.getLogger(__name__)
+
+class AudiobookAgent:
+    """LangGraph agent for audiobook generation"""
+    def __init__(self, config: AudiobookConfig):
+        self.config = config
+        self.workflow = self._build_workflow()
+
+    def _build_workflow(self) -> StateGraph:
+        """Build the agent workflow"""
+        workflow = StateGraph(AudiobookState)
+
+        # Add nodes
+        workflow.add_node("parse", self.parse_node)
+
+        return workflow.compile()
+    
+    def parse_node(self, state: AudiobookState) -> AudiobookState:
+        """Parse PDF and extract text"""
+        try:
+            logger.info(f"Parsing book : {state['book_path']}")
+            parser = PDFParser()
+            book  = parser.parse(Path(state['book']))
+
+            # check if there is extracted content
+            if not book.raw_text or len(book.raw_text.strip() == 0):
+                return {
+                    **state,
+                    "error": "File contains no data to extract"
+                }
+            
+            logger.info(f"Sucessfully parsed : {book.title}")
+
+            return {
+                **state,
+                "Book": book,
+                "error": None
+            }
+
+        except FileNotFoundError as e:
+            return {
+                **state,
+                "error": f"Fatal : file not found - {e}"
+            }
+        except Exception as e:
+            return {
+                **state,
+                "error": f"fatal: Failed to parse PDF - {e}"
+            }
+

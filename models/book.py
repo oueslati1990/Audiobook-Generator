@@ -2,7 +2,7 @@
 from dataclasses import dataclass, field
 from typing import Optional, List
 from pathlib import Path
-from chapter import Chapter
+from models.chapter import Chapter
 
 @dataclass
 class Book:
