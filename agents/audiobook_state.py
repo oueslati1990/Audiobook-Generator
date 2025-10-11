@@ -1,7 +1,7 @@
 from typing import TypedDict, Optional
 
-from ..models.config import AudiobookConfig
-from ..models.book import Book
+from models.config import AudiobookConfig
+from models.book import Book
 
 class AudiobookState(TypedDict):
     """State that flows through the workflow"""

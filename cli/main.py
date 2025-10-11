@@ -5,7 +5,7 @@ from typing import Optional
 from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
-from ..models.config import AudiobookConfig, TTSConfig, OutputConfig, ChapterDetectionConfig
+from models.config import AudiobookConfig, TTSConfig, OutputConfig, ChapterDetectionConfig
 
 app = typer.Typer(help="Convert PDF books to audiobooks using AI", invoke_without_command=True)
 console = Console()

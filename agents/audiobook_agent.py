@@ -1,9 +1,12 @@
 import logging
+from langgraph.graph import StateGraph, END
+from pathlib import Path
+
 from models.config import AudiobookConfig
 from agents.audiobook_state import AudiobookState
 from modules.parser.pdf_parser import PDFParser
-from langgraph.graph import StateGraph, END
-from pathlib import Path
+from modules.splitter.chapter_splitter import ChapterSplitter
+
 
 
 logger = logging.getLogger(__name__)
@@ -20,6 +23,7 @@ class AudiobookAgent:
 
         # Add nodes
         workflow.add_node("parse", self.parse_node)
+        workflow.add_node("split", self.split_node)
 
         return workflow.compile()
     
@@ -54,5 +58,24 @@ class AudiobookAgent:
             return {
                 **state,
                 "error": f"fatal: Failed to parse PDF - {e}"
+            }
+        
+    def split_node(self, state: AudiobookState) -> AudiobookState:
+        """Split book into chapters"""
+        try:
+            logger.info("Splitting book into chapters")
+            splitter = ChapterSplitter(self.config.chapter_detection)
+            book = splitter.split_and_update_book(state['book'])
+
+            logger.info(f"Found {len(book.chapters)} chapters")
+            return {
+                **state,
+                "book": book,
+                "error": None
+            }
+        except Exception as e:
+            return {
+                **state,
+                "error": f"Failed to split chapters - {e}"
             }
 
