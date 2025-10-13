@@ -25,6 +25,19 @@ class AudiobookAgent:
         workflow.add_node("parse", self.parse_node)
         workflow.add_node("split", self.split_node)
 
+        # Set entry point
+        workflow.set_entry_point("parse")
+
+        # Add edges
+        workflow.add_conditional_edges(
+            "parse",
+            self.route_after_step,
+            {
+                "continue": "split",
+                "end": END
+            })
+        
+
         return workflow.compile()
     
     def parse_node(self, state: AudiobookState) -> AudiobookState:
@@ -78,4 +91,13 @@ class AudiobookAgent:
                 **state,
                 "error": f"Failed to split chapters - {e}"
             }
+        
+    def route_after_step(self, state: AudiobookState) -> str:
+        """Conditional routing: stop on fatal errors, continue otherwise"""
+        error = state.get("error")
 
+        if error and error.startswith("fatal"):
+            logger.error(f"Fatal error encountered: {error}")
+            return "end"
+        
+        return "continue"
