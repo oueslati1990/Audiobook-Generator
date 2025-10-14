@@ -6,6 +6,7 @@ from models.config import AudiobookConfig
 from agents.audiobook_state import AudiobookState
 from modules.parser.pdf_parser import PDFParser
 from modules.splitter.chapter_splitter import ChapterSplitter
+from modules.tts.coqui_tts import CoquiTTS
 
 
 
@@ -24,6 +25,7 @@ class AudiobookAgent:
         # Add nodes
         workflow.add_node("parse", self.parse_node)
         workflow.add_node("split", self.split_node)
+        workflow.add_edge("tts", self.tts_node)
 
         # Set entry point
         workflow.set_entry_point("parse")
@@ -34,6 +36,14 @@ class AudiobookAgent:
             self.route_after_step,
             {
                 "continue": "split",
+                "end": END
+            })
+        
+        workflow.add_conditional_edges(
+            "split",
+            self.route_after_step,
+            {
+                "continue": "tts",
                 "end": END
             })
         
@@ -90,6 +100,70 @@ class AudiobookAgent:
             return {
                 **state,
                 "error": f"Failed to split chapters - {e}"
+            }
+        
+    def tts_node(self, state: AudiobookState) -> AudiobookState:
+        """Generate audio for each chapter"""
+        try:
+            logger.info("Generating audio for chapters")
+            tts = CoquiTTS(
+                voice=self.config.tts.voice,
+                speed=self.config.tts.speed,
+                language=self.config.tts.language
+            )
+
+            book = state['book']
+            output_dir = Path(state['output_dir'])
+            chapters_dir = output_dir / "chapters"
+            chapters_dir.mkdir(parents=True, exist_ok=True)
+
+            successful_chapters = 0
+            failed_chapters = []
+
+            for chapter in book.chapters:
+                try:
+                    # Generate audio filename
+                    audio_filename = f"chapter_{chapter.number:02d}.{self.config.output.format}"
+                    audio_path = chapters_dir / audio_filename
+
+                    # Generate audio
+                    generated_path = tts.generate_audio(chapter, audio_path)
+                    chapter.audio_path = generated_path
+                    successful_chapters += 1
+
+                    logger.info(f"✓ Chapter {chapter.number} complete")
+
+                except Exception as e:
+                    # Non-fatal: log and continue with next chapter
+                    logger.warning(f"✗ Chapter {chapter.number} failed: {e}")
+                    failed_chapters.append(chapter.number)
+                    continue
+            
+            # Fatal error: ALL chapters failed
+            if successful_chapters == 0:
+                return {
+                    **state,
+                    "error": "fatal: All chapters failed to generate audio"
+                }
+            
+            # Partial failure: some chapters succeeded
+            if failed_chapters:
+                warning_msg = f"warning: {len(failed_chapters)} chapters failed: {failed_chapters}"
+                logger.warning(warning_msg)
+                # Remove failed chapters from book
+                book.chapters = [ch for ch in book.chapters if ch.audio_path]
+
+            logger.info(f"Audio generation complete: {successful_chapters}/{len(book.chapters)} chapters")
+            return {
+                **state,
+                "book": book,
+                "error": None
+            }
+
+        except Exception as e:
+            return {
+                **state,
+                "error": f"fatal: TTS initialization failed - {e}"
             }
         
     def route_after_step(self, state: AudiobookState) -> str:
