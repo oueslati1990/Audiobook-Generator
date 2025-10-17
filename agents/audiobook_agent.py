@@ -6,7 +6,7 @@ from models.config import AudiobookConfig
 from agents.audiobook_state import AudiobookState
 from modules.parser.pdf_parser import PDFParser
 from modules.splitter.chapter_splitter import ChapterSplitter
-from modules.tts.coqui_tts import CoquiTTS
+from modules.tts.edge_tts_provider import EdgeTTS
 
 
 
@@ -25,7 +25,7 @@ class AudiobookAgent:
         # Add nodes
         workflow.add_node("parse", self.parse_node)
         workflow.add_node("split", self.split_node)
-        workflow.add_edge("tts", self.tts_node)
+        workflow.add_node("tts", self.tts_node)
 
         # Set entry point
         workflow.set_entry_point("parse")
@@ -55,27 +55,27 @@ class AudiobookAgent:
         try:
             logger.info(f"Parsing book : {state['book_path']}")
             parser = PDFParser()
-            book  = parser.parse(Path(state['book']))
+            book  = parser.parse(Path(state['book_path']))
 
             # check if there is extracted content
-            if not book.raw_text or len(book.raw_text.strip() == 0):
+            if not book.raw_text or len(book.raw_text.strip()) == 0:
                 return {
                     **state,
-                    "error": "File contains no data to extract"
+                    "error": "fatal: File contains no data to extract"
                 }
-            
-            logger.info(f"Sucessfully parsed : {book.title}")
+
+            logger.info(f"Successfully parsed : {book.title}")
 
             return {
                 **state,
-                "Book": book,
+                "book": book,
                 "error": None
             }
 
         except FileNotFoundError as e:
             return {
                 **state,
-                "error": f"Fatal : file not found - {e}"
+                "error": f"fatal: File not found - {e}"
             }
         except Exception as e:
             return {
@@ -99,14 +99,14 @@ class AudiobookAgent:
         except Exception as e:
             return {
                 **state,
-                "error": f"Failed to split chapters - {e}"
+                "error": f"fatal: Failed to split chapters - {e}"
             }
         
     def tts_node(self, state: AudiobookState) -> AudiobookState:
         """Generate audio for each chapter"""
         try:
             logger.info("Generating audio for chapters")
-            tts = CoquiTTS(
+            tts = EdgeTTS(
                 voice=self.config.tts.voice,
                 speed=self.config.tts.speed,
                 language=self.config.tts.language

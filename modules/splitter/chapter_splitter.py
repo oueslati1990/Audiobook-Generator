@@ -52,7 +52,8 @@ class ChapterSplitter:
                 title=chapter_title,
                 text=chapter_text
             ))
-            return chapters
+
+        return chapters
         
     def split_and_update_book(self, book: Book) -> Book:
         """
@@ -66,4 +67,5 @@ class ChapterSplitter:
         """
         chapters = self.split(book)
         book.chapters = chapters
+        return book
         

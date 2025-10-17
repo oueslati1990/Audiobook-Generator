@@ -1,10 +1,10 @@
-"""Edge TTS implementation (formerly Coqui TTS)"""
+"""Edge TTS implementation"""
 import logging
 import asyncio
+import subprocess
 from pathlib import Path
 
 import edge_tts
-from pydub import AudioSegment
 
 from models.chapter import Chapter
 from modules.tts.base_tts import BaseTTS
@@ -12,8 +12,8 @@ from modules.tts.base_tts import BaseTTS
 logger = logging.getLogger(__name__)
 
 
-class CoquiTTS(BaseTTS):
-    """Edge TTS provider implementation (keeping class name for compatibility)"""
+class EdgeTTS(BaseTTS):
+    """Edge TTS provider implementation"""
 
     def __init__(self, voice: str = "default", speed: float = 1.0, language: str = "en"):
         super().__init__(voice, speed, language)
@@ -84,22 +84,41 @@ class CoquiTTS(BaseTTS):
                 temp_mp3_path.rename(output_path)
                 logger.info(f"Audio saved as MP3: {output_path}")
             else:
-                # Convert MP3 to requested format
+                # Convert MP3 to requested format using ffmpeg
                 try:
-                    audio = AudioSegment.from_mp3(str(temp_mp3_path))
+                    logger.info(f"Converting MP3 to {output_format.upper()}...")
 
-                    # Export with format-specific settings
-                    export_params = {}
+                    # Build ffmpeg command
+                    cmd = ['ffmpeg', '-i', str(temp_mp3_path), '-y']
+
+                    # Add format-specific options
                     if output_format == 'wav':
-                        # No special params for WAV
-                        pass
-                    elif output_format in ['ogg', 'flac']:
-                        # Use appropriate codec
-                        pass
+                        cmd.extend(['-acodec', 'pcm_s16le'])
+                    elif output_format == 'ogg':
+                        cmd.extend(['-acodec', 'libvorbis'])
+                    elif output_format == 'flac':
+                        cmd.extend(['-acodec', 'flac'])
 
-                    audio.export(str(output_path), format=output_format, **export_params)
+                    cmd.append(str(output_path))
+
+                    # Run ffmpeg conversion
+                    result = subprocess.run(
+                        cmd,
+                        capture_output=True,
+                        text=True,
+                        timeout=300  # 5 minute timeout
+                    )
+
+                    if result.returncode != 0:
+                        raise RuntimeError(f"ffmpeg conversion failed: {result.stderr}")
+
                     logger.info(f"Audio converted and saved as {output_format.upper()}: {output_path}")
 
+                except FileNotFoundError:
+                    raise RuntimeError(
+                        "ffmpeg not found. Please install ffmpeg to convert to formats other than MP3. "
+                        "Install with: sudo dnf install ffmpeg"
+                    )
                 except Exception as e:
                     raise RuntimeError(f"Failed to convert audio to {output_format}: {e}")
                 finally:

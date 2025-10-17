@@ -1,0 +1,19 @@
+#!/usr/bin/env python3
+"""Offline audiobook generator CLI wrapper"""
+
+import sys
+from pathlib import Path
+
+# Add project root to path
+sys.path.insert(0, str(Path(__file__).parent))
+
+# Monkey patch BEFORE any imports
+from modules.tts.pyttsx3_tts import Pyttsx3TTS
+import modules.tts.edge_tts_provider
+modules.tts.edge_tts_provider.EdgeTTS = Pyttsx3TTS
+
+# Now import and run the CLI
+from cli.main import app
+
+if __name__ == "__main__":
+    app()
