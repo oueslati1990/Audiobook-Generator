@@ -42,9 +42,9 @@ def generate(
         help="Audio format (mp3, wav, ogg, flac)"
     ),
     speed: float = typer.Option(
-        1.3,
+        1.0,
         "--speed", "-s",
-        help="Speech speed (0.5 - 2.0)"
+        help="Speech speed (0.5 - 2.0, 1.0=normal, 0.8=slower/clearer)"
     ),
     chapter_pattern: str = typer.Option(
         r"^(Chapter|CHAPTER)\s+\d+",

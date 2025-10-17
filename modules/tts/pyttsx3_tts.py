@@ -25,18 +25,50 @@ class Pyttsx3TTS(BaseTTS):
                 self._engine = pyttsx3.init()
 
                 # Set speech rate (words per minute)
-                # Default is usually around 200 wpm
-                rate = int(200 * self.speed)
+                # Default pyttsx3 rate is ~200 wpm, but we want it slower and clearer
+                # Speed 1.0 should be normal (150 wpm for better clarity)
+                # Speed 1.3 = 195 wpm, Speed 0.8 = 120 wpm
+                base_rate = 150  # More natural base rate
+                rate = int(base_rate * self.speed)
                 self._engine.setProperty('rate', rate)
+                logger.info(f"Speech rate set to: {rate} wpm (speed multiplier: {self.speed}x)")
 
-                # Set voice if not default
+                # Set volume to maximum for better clarity
+                self._engine.setProperty('volume', 1.0)
+
+                # Try to find and use a better quality voice
+                voices = self._engine.getProperty('voices')
+
                 if self.voice != "default":
-                    voices = self._engine.getProperty('voices')
+                    # User specified a voice
                     for v in voices:
                         if self.voice in v.id or self.voice in v.name:
                             self._engine.setProperty('voice', v.id)
                             logger.info(f"Using voice: {v.name}")
                             break
+                else:
+                    # Try to find a better quality voice (prefer female voices, often clearer)
+                    # Look for voices with "english" and prefer those with "female" or quality indicators
+                    best_voice = None
+
+                    for v in voices:
+                        voice_name = v.name.lower()
+                        voice_id = v.id.lower()
+
+                        # Prefer english voices
+                        if 'english' in voice_name or 'english' in voice_id or 'en' in voice_id:
+                            # Prefer female voices (often clearer) or quality voices
+                            if 'female' in voice_name or 'aria' in voice_name or 'zira' in voice_name:
+                                best_voice = v
+                                break
+                            elif best_voice is None:
+                                best_voice = v
+
+                    if best_voice:
+                        self._engine.setProperty('voice', best_voice.id)
+                        logger.info(f"Using voice: {best_voice.name}")
+                    else:
+                        logger.info(f"Using default system voice")
 
                 logger.info("pyttsx3 engine initialized successfully")
             except Exception as e:
