@@ -3,7 +3,8 @@ langgraph>=0.2.0
 langchain>=0.3.0
 
 # TTS engines
-TTS>=0.22.0  # Coqui TTS
+edge-tts>=7.2.0  # Microsoft Edge TTS (free, cloud-based)
+# Alternative: pyttsx3>=2.90  # Offline TTS
 
 # Text processing
 pypdf2>=3.0.0
