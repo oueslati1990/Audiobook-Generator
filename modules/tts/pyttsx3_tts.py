@@ -83,7 +83,19 @@ class Pyttsx3TTS(BaseTTS):
             self._engine.save_to_file(chapter.text, str(output_path))
             self._engine.runAndWait()
 
-            # Validate output was created
+            # pyttsx3 may need a moment to flush the file to disk
+            import time
+            max_wait = 5  # Maximum 5 seconds
+            wait_interval = 0.5  # Check every 0.5 seconds
+            elapsed = 0
+
+            while elapsed < max_wait:
+                if self._validate_output(output_path):
+                    break
+                time.sleep(wait_interval)
+                elapsed += wait_interval
+
+            # Final validation
             if not self._validate_output(output_path):
                 raise RuntimeError(f"Failed to generate audio file for chapter {chapter.number}")
 

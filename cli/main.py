@@ -115,20 +115,32 @@ def generate(
 
     # Create agent with appropriate TTS
     if offline:
-        # Import and temporarily replace the TTS class before creating agent
-        from modules.tts.pyttsx3_tts import Pyttsx3TTS
+        # For offline mode, we need to patch before any agent imports
+        # This is a workaround since the agent module is already imported
         import sys
-        import agents.audiobook_agent as agent_module
+        from modules.tts.pyttsx3_tts import Pyttsx3TTS
 
-        # Store original
-        original_import = agent_module.EdgeTTS
-        # Replace with offline TTS
-        agent_module.EdgeTTS = Pyttsx3TTS
+        # Reload the modules to apply the patch
+        if 'agents.audiobook_agent' in sys.modules:
+            import importlib
+            # Patch the module before creating the agent
+            import modules.tts.edge_tts_provider
+            original_class = modules.tts.edge_tts_provider.EdgeTTS
+            modules.tts.edge_tts_provider.EdgeTTS = Pyttsx3TTS
 
-        agent = AudiobookAgent(config)
+            # Reload the agent module to pick up the change
+            import agents.audiobook_agent
+            importlib.reload(agents.audiobook_agent)
 
-        # Restore original (not strictly necessary but clean)
-        agent_module.EdgeTTS = original_import
+            agent = AudiobookAgent(config)
+
+            # Restore original
+            modules.tts.edge_tts_provider.EdgeTTS = original_class
+        else:
+            # If not imported yet, patch before import
+            import modules.tts.edge_tts_provider
+            modules.tts.edge_tts_provider.EdgeTTS = Pyttsx3TTS
+            agent = AudiobookAgent(config)
     else:
         agent = AudiobookAgent(config)
 
