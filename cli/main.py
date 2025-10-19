@@ -54,7 +54,7 @@ def generate(
     offline: bool = typer.Option(
         False,
         "--offline",
-        help="Use offline TTS (pyttsx3) instead of Edge TTS"
+        help="Use Neuphonic TTS (requires NEUPHONIC_API_KEY) instead of Edge TTS"
     )
 ):
     """
@@ -82,7 +82,7 @@ def generate(
     output_path = Path(output_dir)
 
     # Show configuration
-    tts_mode = "pyttsx3 (offline)" if offline else "Edge TTS (online)"
+    tts_mode = "Neuphonic (high quality)" if offline else "Edge TTS (online)"
     console.print(Panel.fit(
         f"[bold cyan]Audiobook Generator[/bold cyan]\n\n"
         f"📖 Book: [yellow]{pdf_file.name}[/yellow]\n"
@@ -115,10 +115,10 @@ def generate(
 
     # Create agent with appropriate TTS
     if offline:
-        # For offline mode, we need to patch before any agent imports
+        # For offline mode, use Neuphonic (high quality) instead of Edge TTS
         # This is a workaround since the agent module is already imported
         import sys
-        from modules.tts.pyttsx3_tts import Pyttsx3TTS
+        from modules.tts.neuphonic_tts import NeuphonicTTS
 
         # Reload the modules to apply the patch
         if 'agents.audiobook_agent' in sys.modules:
@@ -126,7 +126,7 @@ def generate(
             # Patch the module before creating the agent
             import modules.tts.edge_tts_provider
             original_class = modules.tts.edge_tts_provider.EdgeTTS
-            modules.tts.edge_tts_provider.EdgeTTS = Pyttsx3TTS
+            modules.tts.edge_tts_provider.EdgeTTS = NeuphonicTTS
 
             # Reload the agent module to pick up the change
             import agents.audiobook_agent
@@ -139,7 +139,7 @@ def generate(
         else:
             # If not imported yet, patch before import
             import modules.tts.edge_tts_provider
-            modules.tts.edge_tts_provider.EdgeTTS = Pyttsx3TTS
+            modules.tts.edge_tts_provider.EdgeTTS = NeuphonicTTS
             agent = AudiobookAgent(config)
     else:
         agent = AudiobookAgent(config)

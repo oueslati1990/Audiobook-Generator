@@ -4,6 +4,7 @@ langchain>=0.3.0
 
 # TTS engines
 edge-tts>=7.2.0  # Microsoft Edge TTS (free, cloud-based)
+pyneuphonic>=1.8.0  # Neuphonic TTS (high quality neural voices, requires API key)
 # Alternative: pyttsx3>=2.90  # Offline TTS
 
 # Text processing
